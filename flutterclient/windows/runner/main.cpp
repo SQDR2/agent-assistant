@@ -9,6 +9,9 @@
 // Link with Shlwapi.lib
 #pragma comment(lib, "Shlwapi.lib")
 
+// Static variable to hold the process handle of agentassistant-srv.exe
+static HANDLE srv_process_handle = nullptr;
+
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
                       _In_ wchar_t *command_line, _In_ int show_command)
 {
@@ -32,8 +35,33 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   wchar_t srv_path[MAX_PATH];
   swprintf_s(srv_path, MAX_PATH, L"%s\\agentassistant-srv.exe", module_path);
 
-  // Launch agentassistant-srv.exe in a hidden window
-  ShellExecuteW(nullptr, L"open", srv_path, nullptr, nullptr, SW_HIDE);
+  STARTUPINFOW si;
+  PROCESS_INFORMATION pi;
+  ZeroMemory(&si, sizeof(si));
+  si.cb = sizeof(si);
+  si.dwFlags = STARTF_USESHOWWINDOW;
+  si.wShowWindow = SW_HIDE; // Hide the console window
+  ZeroMemory(&pi, sizeof(pi));
+
+  // Create the child process.
+  if (CreateProcessW(
+          NULL,             // No module name (use command line)
+          srv_path,         // Command line
+          NULL,             // Process handle not inheritable
+          NULL,             // Thread handle not inheritable
+          FALSE,            // Set handle inheritance to FALSE
+          CREATE_NO_WINDOW, // Do not create a console window
+          NULL,             // Use parent's environment block
+          NULL,             // Use parent's starting directory
+          &si,              // Pointer to STARTUPINFO structure
+          &pi               // Pointer to PROCESS_INFORMATION structure
+          ))
+  {
+    // Store the process handle
+    srv_process_handle = pi.hProcess;
+    // Close the thread handle immediately as we don't need it
+    CloseHandle(pi.hThread);
+  }
   // --- End agentassistant-srv.exe startup ---
 
   flutter::DartProject project(L"data");
@@ -58,6 +86,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
     ::TranslateMessage(&msg);
     ::DispatchMessage(&msg);
   }
+
+  // --- Terminate agentassistant-srv.exe ---
+  if (srv_process_handle)
+  {
+    TerminateProcess(srv_process_handle, 0); // Terminate with exit code 0
+    CloseHandle(srv_process_handle);
+  }
+  // --- End agentassistant-srv.exe termination ---
 
   ::CoUninitialize();
   return EXIT_SUCCESS;
