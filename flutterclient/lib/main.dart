@@ -2,8 +2,10 @@ import 'package:flutter/material.dart' hide MenuItem;
 import 'package:provider/provider.dart';
 import 'package:tray_manager/tray_manager.dart';
 import 'package:bitsdojo_window/bitsdojo_window.dart';
-import 'dart:io' show Platform;
+import 'dart:io'
+    show Platform; // Changed back to show Platform if only Platform is needed.
 import 'package:window_manager/window_manager.dart';
+// import 'package:flutter/services.dart'; // No longer needed for SystemNavigator.pop
 
 import 'providers/chat_provider.dart';
 import 'screens/login_screen.dart';
@@ -94,7 +96,8 @@ class _AgentAssistantAppState extends State<AgentAssistantApp>
     if (menuItem.key == 'show_window') {
       appWindow.show();
     } else if (menuItem.key == 'exit_app') {
-      windowManager.destroy();
+      windowManager
+          .destroy(); // Reverted to windowManager.destroy() for proper native cleanup.
     }
   }
 
