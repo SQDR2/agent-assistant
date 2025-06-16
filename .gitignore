@@ -36,3 +36,9 @@ dist/
 cmd/agentassistant-mcp/agentassistant-mcp
 cmd/agentassistant-srv/agentassistant-srv
 cmd/agentassistant-input/agentassistant-input
+
+# Agent Assistant binaries
+agentassistant-mcp
+agentassistant-mcp.exe
+agentassistant-srv
+agentassistant-srv.exe
