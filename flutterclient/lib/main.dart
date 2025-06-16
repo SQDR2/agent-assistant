@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart' hide MenuItem;
 import 'package:provider/provider.dart';
-import 'package:tray_manager/tray_manager.dart';
+import 'package:system_tray/system_tray.dart';
 import 'package:bitsdojo_window/bitsdojo_window.dart';
 import 'dart:io'
     show Platform; // Changed back to show Platform if only Platform is needed.
 import 'package:window_manager/window_manager.dart';
-// import 'package:flutter/services.dart'; // No longer needed for SystemNavigator.pop
+import 'package:flutter/services.dart'; // 添加这行导入
 
 import 'providers/chat_provider.dart';
 import 'screens/login_screen.dart';
@@ -23,11 +23,20 @@ void main() async {
 
   runApp(const AgentAssistantApp());
 
-  doWhenWindowReady(() {
+  doWhenWindowReady(() async {
     final initialSize = const Size(1000, 700);
     appWindow.minSize = initialSize;
     appWindow.size = initialSize;
     appWindow.alignment = Alignment.center;
+
+    // 设置窗口图标和标题
+    if (Platform.isWindows) {
+      await windowManager.setIcon('assets/app_icon.ico');
+    } else if (Platform.isLinux) {
+      await windowManager.setIcon('assets/app_icon.png');
+    }
+    await windowManager.setTitle('agent-assistant');
+
     appWindow.show();
   });
 }
@@ -40,12 +49,14 @@ class AgentAssistantApp extends StatefulWidget {
 }
 
 class _AgentAssistantAppState extends State<AgentAssistantApp>
-    with TrayListener
     implements WindowListener {
+  final SystemTray _systemTray = SystemTray();
+  final AppWindow _appWindow = AppWindow();
+  late final List<MenuItemBase> _menuItems;
+
   @override
   void initState() {
     super.initState();
-    trayManager.addListener(this);
     windowManager.addListener(this);
     Future.microtask(() async {
       await windowManager.setPreventClose(true);
@@ -55,7 +66,6 @@ class _AgentAssistantAppState extends State<AgentAssistantApp>
 
   @override
   void dispose() {
-    trayManager.removeListener(this);
     windowManager.removeListener(this);
     super.dispose();
   }
@@ -63,42 +73,25 @@ class _AgentAssistantAppState extends State<AgentAssistantApp>
   Future<void> _initSystemTray() async {
     String path =
         Platform.isWindows ? 'assets/app_icon.ico' : 'assets/app_icon.png';
-    await trayManager.setIcon(path);
-
-    Menu menu = Menu(
-      items: [
-        MenuItem(
-          key: 'show_window',
-          label: '显示窗口',
-        ),
-        MenuItem.separator(),
-        MenuItem(
-          key: 'exit_app',
+    await _systemTray.initSystemTray(title: "Agent Assistant", iconPath: path);
+    _menuItems = [
+      MenuItem(label: '显示窗口', onClicked: () => _appWindow.show()),
+      MenuItem(label: '隐藏窗口', onClicked: () => _appWindow.hide()),
+      MenuItem(
           label: '退出应用',
-        ),
-      ],
-    );
-    await trayManager.setContextMenu(menu);
-  }
-
-  @override
-  void onTrayIconMouseDown() {
-    appWindow.show();
-  }
-
-  @override
-  void onTrayIconRightMouseDown() {
-    trayManager.popUpContextMenu();
-  }
-
-  @override
-  void onTrayMenuItemClick(MenuItem menuItem) async {
-    if (menuItem.key == 'show_window') {
-      appWindow.show();
-    } else if (menuItem.key == 'exit_app') {
-      windowManager
-          .destroy(); // Reverted to windowManager.destroy() for proper native cleanup.
-    }
+          onClicked: () async {
+            await windowManager.destroy();
+            SystemNavigator.pop();
+          }),
+    ];
+    await _systemTray.setContextMenu(_menuItems);
+    _systemTray.registerSystemTrayEventHandler((eventName) {
+      if (eventName == 'click') {
+        Platform.isWindows ? _appWindow.show() : _systemTray.popUpContextMenu();
+      } else if (eventName == 'right-click') {
+        Platform.isWindows ? _systemTray.popUpContextMenu() : _appWindow.show();
+      }
+    });
   }
 
   @override
