@@ -12,11 +12,11 @@ dependencies:
     sdk: flutter
 
   # UI and Material Design
-  cupertino_icons: ^1.0.8
+  cupertino_icons: ^1.0.2
   material_color_utilities: ^0.11.1
 
   # State Management
-  provider: ^6.1.2
+  provider: ^6.1.1
 
   # Network and WebSocket
   web_socket_channel: ^3.0.1
@@ -47,9 +47,12 @@ dependencies:
   package_info_plus: ^8.0.2
 
   # Desktop Window Management
-  window_manager: ^0.3.9
+  window_manager: ^0.3.8
   system_tray: ^0.1.1
   bitsdojo_window: ^0.1.6
+
+  # New dependency
+  logging: ^1.2.0
 
 dev_dependencies:
   flutter_test:

@@ -3,7 +3,11 @@ import 'package:provider/provider.dart';
 import 'package:system_tray/system_tray.dart';
 import 'package:bitsdojo_window/bitsdojo_window.dart';
 import 'dart:io'
-    show Platform; // Changed back to show Platform if only Platform is needed.
+    show
+        Platform,
+        exit,
+        Process,
+        ProcessInfo; // Changed back to show Platform if only Platform is needed.
 import 'package:window_manager/window_manager.dart';
 import 'package:flutter/services.dart'; // 添加这行导入
 
@@ -12,11 +16,19 @@ import 'screens/login_screen.dart';
 import 'screens/chat_screen.dart';
 import 'screens/splash_screen.dart';
 import 'config/app_config.dart';
+import 'services/service_manager.dart';
 // import 'services/window_service.dart'; // Removed as bitsdojo_window will handle window management
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await windowManager.ensureInitialized();
+
+  // 启动服务器
+  try {
+    await ServiceManager().startServer();
+  } catch (e) {
+    print('Failed to start server: $e');
+  }
 
   // Initialize window service for desktop platforms
   // await WindowService().initialize(); // Removed
@@ -80,8 +92,14 @@ class _AgentAssistantAppState extends State<AgentAssistantApp>
       MenuItem(
           label: '退出应用',
           onClicked: () async {
-            await windowManager.destroy();
-            SystemNavigator.pop();
+            try {
+              await ServiceManager().stopServer();
+              await windowManager.destroy();
+              exit(0);
+            } catch (e) {
+              print('Error during shutdown: $e');
+              exit(1);
+            }
           }),
     ];
     await _systemTray.setContextMenu(_menuItems);
@@ -133,6 +151,7 @@ class _AgentAssistantAppState extends State<AgentAssistantApp>
     if (isPreventClose) {
       appWindow.hide();
     } else {
+      await ServiceManager().stopServer();
       appWindow.close();
     }
   }
