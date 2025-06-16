@@ -49,6 +49,9 @@ go build -o agentassistant-mcp.exe ./cmd/agentassistant-mcp
 
 ```bash
 ./agentassistant-srv
+
+# 或者使用flutter应用的话，执行./build_flutter_linux.sh 然后启动编译出来的flutterclient就可以了
+# 启动flutterclient的时候会一起启动agentassistant-srv，退出应用的时候也会一起退出
 ```
 
 The server will start on port 8080 and serve:
