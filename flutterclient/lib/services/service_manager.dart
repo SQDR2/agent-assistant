@@ -29,10 +29,28 @@ class ServiceManager {
       final serverPath = _getServerPath();
       _logger.info('Starting server from: $serverPath');
 
+      // 检查文件是否存在
+      final file = File(serverPath);
+      if (!await file.exists()) {
+        _logger.severe('Server executable not found at: $serverPath');
+        throw Exception('Server executable not found at: $serverPath');
+      }
+
+      // 检查文件权限
+      if (Platform.isLinux || Platform.isMacOS) {
+        final stat = await file.stat();
+        if (!stat.modeString().contains('x')) {
+          _logger.severe('Server executable does not have execute permission');
+          throw Exception('Server executable does not have execute permission');
+        }
+      }
+
+      // 使用绝对路径启动进程
       _serverProcess = await Process.start(
         serverPath,
         [],
         mode: ProcessStartMode.detached,
+        workingDirectory: path.dirname(serverPath),
       );
 
       _logger.info('Server started with PID: ${_serverProcess?.pid}');
@@ -64,7 +82,17 @@ class ServiceManager {
     }
 
     try {
-      _serverProcess?.kill();
+      // 在 Linux 上使用 kill 命令强制结束进程
+      if (Platform.isLinux) {
+        final result =
+            await Process.run('kill', ['-9', '${_serverProcess?.pid}']);
+        if (result.exitCode != 0) {
+          _logger.warning('Failed to kill process: ${result.stderr}');
+        }
+      } else {
+        _serverProcess?.kill();
+      }
+
       await _serverProcess?.exitCode;
       _serverProcess = null;
       _logger.info('Server stopped');
@@ -77,7 +105,15 @@ class ServiceManager {
   String _getServerPath() {
     final executableName =
         Platform.isWindows ? 'agentassistant-srv.exe' : 'agentassistant-srv';
-    final currentDir = Directory.current.path;
-    return path.join(currentDir, executableName);
+
+    // 获取当前可执行文件的目录
+    final currentDir = path.dirname(Platform.resolvedExecutable);
+    _logger.info('Current executable directory: $currentDir');
+
+    // 构建服务器路径
+    final serverPath = path.join(currentDir, executableName);
+    _logger.info('Server path: $serverPath');
+
+    return serverPath;
   }
 }
