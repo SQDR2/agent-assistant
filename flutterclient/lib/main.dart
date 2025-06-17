@@ -2,14 +2,8 @@ import 'package:flutter/material.dart' hide MenuItem;
 import 'package:provider/provider.dart';
 import 'package:system_tray/system_tray.dart';
 import 'package:bitsdojo_window/bitsdojo_window.dart';
-import 'dart:io'
-    show
-        Platform,
-        exit,
-        Process,
-        ProcessInfo; // Changed back to show Platform if only Platform is needed.
+import 'dart:io' show Platform, exit;
 import 'package:window_manager/window_manager.dart';
-import 'package:flutter/services.dart'; // 添加这行导入
 
 import 'providers/chat_provider.dart';
 import 'screens/login_screen.dart';
@@ -63,14 +57,16 @@ class AgentAssistantApp extends StatefulWidget {
 class _AgentAssistantAppState extends State<AgentAssistantApp>
     implements WindowListener {
   final SystemTray _systemTray = SystemTray();
-  final AppWindow _appWindow = AppWindow();
   late final List<MenuItemBase> _menuItems;
 
   @override
   void initState() {
     super.initState();
     windowManager.addListener(this);
-    Future.microtask(() async {
+    // 延迟初始化系统托盘，确保窗口完全准备好
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await Future.delayed(
+          const Duration(milliseconds: 1000)); // 额外延迟确保Windows准备好
       await windowManager.setPreventClose(true);
       await _initSystemTray();
     });
@@ -83,33 +79,104 @@ class _AgentAssistantAppState extends State<AgentAssistantApp>
   }
 
   Future<void> _initSystemTray() async {
-    String path =
-        Platform.isWindows ? 'assets/app_icon.ico' : 'assets/app_icon.png';
-    await _systemTray.initSystemTray(title: "Agent Assistant", iconPath: path);
-    _menuItems = [
-      MenuItem(label: '显示窗口', onClicked: () => _appWindow.show()),
-      MenuItem(label: '隐藏窗口', onClicked: () => _appWindow.hide()),
-      MenuItem(
-          label: '退出应用',
-          onClicked: () async {
-            try {
-              await ServiceManager().stopServer();
-              await windowManager.destroy();
-              exit(0);
-            } catch (e) {
-              print('Error during shutdown: $e');
-              exit(1);
-            }
-          }),
-    ];
-    await _systemTray.setContextMenu(_menuItems);
-    _systemTray.registerSystemTrayEventHandler((eventName) {
-      if (eventName == 'click') {
-        Platform.isWindows ? _appWindow.show() : _systemTray.popUpContextMenu();
-      } else if (eventName == 'right-click') {
-        Platform.isWindows ? _systemTray.popUpContextMenu() : _appWindow.show();
-      }
-    });
+    try {
+      print('Initializing system tray...');
+
+      String path =
+          Platform.isWindows ? 'assets/app_icon.ico' : 'assets/app_icon.png';
+      print('Using icon path: $path');
+
+      // 初始化系统托盘
+      await _systemTray.initSystemTray(
+          title: "Agent Assistant",
+          iconPath: path,
+          toolTip: "Agent Assistant - 右键查看菜单");
+      print('System tray initialized');
+
+      // 创建菜单项
+      _menuItems = [
+        MenuItem(
+            label: '显示窗口',
+            onClicked: () async {
+              print('Show window clicked');
+              try {
+                await windowManager.show();
+                await windowManager.focus();
+              } catch (e) {
+                print('Error showing window: $e');
+              }
+            }),
+        MenuItem(
+            label: '隐藏窗口',
+            onClicked: () async {
+              print('Hide window clicked');
+              try {
+                await windowManager.hide();
+              } catch (e) {
+                print('Error hiding window: $e');
+              }
+            }),
+        MenuItem(
+            label: '退出应用',
+            onClicked: () async {
+              print('Exit app clicked');
+              try {
+                await ServiceManager().stopServer();
+                await windowManager.destroy();
+                exit(0);
+              } catch (e) {
+                print('Error during shutdown: $e');
+                exit(1);
+              }
+            }),
+      ];
+
+      // 设置上下文菜单
+      await _systemTray.setContextMenu(_menuItems);
+      print('Context menu set');
+
+      // 注册事件处理器
+      _systemTray.registerSystemTrayEventHandler((eventName) {
+        print('System tray event received: $eventName');
+
+        if (eventName == 'click') {
+          print('Processing click event');
+          if (Platform.isWindows) {
+            // Windows: 左键点击显示窗口
+            _showWindow();
+          } else {
+            // 其他平台: 左键点击显示菜单
+            _systemTray.popUpContextMenu();
+          }
+        } else if (eventName == 'right-click') {
+          print('Processing right-click event');
+          if (Platform.isWindows) {
+            // Windows: 右键点击显示菜单
+            print('Attempting to show context menu on Windows');
+            _systemTray.popUpContextMenu();
+          } else {
+            // 其他平台: 右键点击显示窗口
+            _showWindow();
+          }
+        }
+      });
+
+      print('System tray initialization completed successfully');
+    } catch (e) {
+      print('Failed to initialize system tray: $e');
+      print('Stack trace: ${StackTrace.current}');
+    }
+  }
+
+  Future<void> _showWindow() async {
+    try {
+      print('Showing window...');
+      await windowManager.show();
+      await windowManager.focus();
+      print('Window shown and focused');
+    } catch (e) {
+      print('Error showing window: $e');
+    }
   }
 
   @override
