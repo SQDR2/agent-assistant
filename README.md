@@ -1,5 +1,9 @@
 # Agent Assistant
 
+这个MCP的主要功能就是将一个向ai提出的问题的对话延长时间。比如一次向copilot提得问题，他回答完成后结束了，那么一次使用机会就没了。但是使用该MCP的话，可以将对话延迟至n次对话，那么免费的使用也可以使用很多次。
+
+The main function of this MCP is to extend the duration of a conversation with an AI. For example, if a question is posed to a copilot and the copilot completes its answer, the conversation ends, and the one-time use opportunity is lost. However, using this MCP, the conversation can be extended to n times, allowing the free use to be used multiple times.
+
 Agent Assistant is a system that allows AI agents to interact with human users through a web interface. It consists of three main components:
 
 1. **agentassistant-srv**: The main server that handles RPC requests and serves the web interface
