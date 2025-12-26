@@ -48,3 +48,7 @@ agentassistant-srv.exe
 # OpenSpec folders to ignore
 openspec/changes/
 openspec/specs/
+
+# Ensure command sources are not ignored
+!cmd/
+!cmd/**
