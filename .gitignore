@@ -44,3 +44,7 @@ agentassistant-srv
 agentassistant-srv.exe
 /flutterclient/agentassistant-srv
 /flutterclient/agentassistant-srv.exe
+
+# OpenSpec folders to ignore
+openspec/changes/
+openspec/specs/
