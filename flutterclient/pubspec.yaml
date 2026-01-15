@@ -2,7 +2,7 @@ name: flutterclient
 description: 'Agent Assistant Flutter Client - Mobile client for AI agent communication'
 publish_to: 'none'
 
-version: 1.1.0
+version: 1.2.0
 
 environment:
   sdk: ^3.5.0
@@ -23,8 +23,11 @@ dependencies:
   http: ^1.2.2
 
   # Protobuf
-  protobuf: ^4.1.0
+  protobuf: ^3.1.0
   fixnum: ^1.1.0
+
+  # Clipboard
+  pasteboard: ^0.2.0
 
   # Storage and Persistence
   shared_preferences: ^2.3.2

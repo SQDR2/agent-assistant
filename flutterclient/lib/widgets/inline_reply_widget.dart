@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:pasteboard/pasteboard.dart';
 
 import '../models/chat_message.dart';
 import '../providers/chat_provider.dart';
@@ -23,6 +24,7 @@ class _InlineReplyWidgetState extends State<InlineReplyWidget> {
   late TextEditingController _controller;
   late FocusNode _focusNode;
   bool _isSubmitting = false;
+  Uint8List? _pastedImage;
 
   @override
   void initState() {
@@ -38,9 +40,18 @@ class _InlineReplyWidgetState extends State<InlineReplyWidget> {
     super.dispose();
   }
 
+  Future<void> _handlePaste() async {
+    final image = await Pasteboard.image;
+    if (image != null) {
+      setState(() {
+        _pastedImage = image;
+      });
+    }
+  }
+
   Future<void> _handleSubmit([String? quickReply]) async {
     final replyText = quickReply ?? _controller.text.trim();
-    if (replyText.isEmpty || _isSubmitting) return;
+    if ((replyText.isEmpty && _pastedImage == null) || _isSubmitting) return;
 
     setState(() {
       _isSubmitting = true;
@@ -50,14 +61,23 @@ class _InlineReplyWidgetState extends State<InlineReplyWidget> {
       final chatProvider = context.read<ChatProvider>();
 
       if (widget.message.type == MessageType.question) {
-        await chatProvider.replyToQuestion(widget.message.id, replyText);
+        await chatProvider.replyToQuestion(
+          widget.message.id,
+          replyText,
+          imageData: _pastedImage,
+          mimeType: _pastedImage != null ? 'image/png' : null,
+        );
       } else if (widget.message.type == MessageType.task) {
         await chatProvider.confirmTask(widget.message.id, replyText);
       }
 
       // Clear the text field if it was a manual input (not quick reply)
+      // Clear the text field if it was a manual input (not quick reply)
       if (quickReply == null) {
         _controller.clear();
+        setState(() {
+          _pastedImage = null;
+        });
       }
     } catch (error) {
       // Error handling is done in ChatProvider
@@ -87,7 +107,7 @@ class _InlineReplyWidgetState extends State<InlineReplyWidget> {
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+          color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
         ),
       ),
       child: Column(
@@ -96,6 +116,49 @@ class _InlineReplyWidgetState extends State<InlineReplyWidget> {
           // Header with question/task info
           _buildHeader(context),
           const SizedBox(height: 12),
+
+          // Image preview
+          if (_pastedImage != null)
+            Stack(
+              children: [
+                Container(
+                  height: 150,
+                  width: 200,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                        color: Theme.of(context).colorScheme.outlineVariant),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.memory(
+                      _pastedImage!,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+                Positioned(
+                  right: 4,
+                  top: 4,
+                  child: InkWell(
+                    onTap: () => setState(() => _pastedImage = null),
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.5),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.close,
+                        size: 16,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
 
           // Text input field with keyboard shortcut
           Focus(
@@ -107,6 +170,15 @@ class _InlineReplyWidgetState extends State<InlineReplyWidget> {
                       HardwareKeyboard.instance.isMetaPressed)) {
                 _handleSubmit();
                 return KeyEventResult.handled;
+              }
+              // Check for Paste (Ctrl+V or Cmd+V)
+              if (event is KeyDownEvent &&
+                  event.logicalKey == LogicalKeyboardKey.keyV &&
+                  (HardwareKeyboard.instance.isControlPressed ||
+                      HardwareKeyboard.instance.isMetaPressed)) {
+                _handlePaste();
+                // Allow default behavior (text paste) to proceed as well
+                return KeyEventResult.ignored;
               }
               return KeyEventResult.ignored;
             },
@@ -155,7 +227,7 @@ class _InlineReplyWidgetState extends State<InlineReplyWidget> {
                             style: OutlinedButton.styleFrom(
                               foregroundColor: Colors.green,
                               side: BorderSide(
-                                  color: Colors.green.withValues(alpha: 0.5)),
+                                  color: Colors.green.withOpacity(0.5)),
                               padding: const EdgeInsets.symmetric(vertical: 8),
                             ),
                           ),
@@ -171,7 +243,7 @@ class _InlineReplyWidgetState extends State<InlineReplyWidget> {
                             style: OutlinedButton.styleFrom(
                               foregroundColor: Colors.blue,
                               side: BorderSide(
-                                  color: Colors.blue.withValues(alpha: 0.5)),
+                                  color: Colors.blue.withOpacity(0.5)),
                               padding: const EdgeInsets.symmetric(vertical: 8),
                             ),
                           ),
@@ -220,7 +292,7 @@ class _InlineReplyWidgetState extends State<InlineReplyWidget> {
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.green,
                             side: BorderSide(
-                                color: Colors.green.withValues(alpha: 0.5)),
+                                color: Colors.green.withOpacity(0.5)),
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 12, vertical: 8),
                           ),
@@ -234,8 +306,8 @@ class _InlineReplyWidgetState extends State<InlineReplyWidget> {
                           label: const Text('Continue'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.blue,
-                            side: BorderSide(
-                                color: Colors.blue.withValues(alpha: 0.5)),
+                            side:
+                                BorderSide(color: Colors.blue.withOpacity(0.5)),
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 12, vertical: 8),
                           ),

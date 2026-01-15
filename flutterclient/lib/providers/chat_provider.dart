@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:logger/logger.dart';
 import 'package:fixnum/fixnum.dart';
@@ -440,7 +442,8 @@ class ChatProvider extends ChangeNotifier {
   }
 
   /// Reply to a question
-  Future<void> replyToQuestion(String messageId, String replyText) async {
+  Future<void> replyToQuestion(String messageId, String replyText,
+      {Uint8List? imageData, String? mimeType}) async {
     final message = _messages.firstWhere((m) => m.id == messageId);
     if (message.type != MessageType.question) return;
 
@@ -448,14 +451,30 @@ class ChatProvider extends ChangeNotifier {
       // Create response
       final response = pb.AskQuestionResponse()
         ..iD = message.requestId
-        ..isError = false
-        ..contents.addAll([
+        ..isError = false;
+      // Add text content if present
+      if (replyText.isNotEmpty) {
+        response.contents.add(
           pb.McpResultContent()
             ..type = 1 // text content type
             ..text = (pb.TextContent()
               ..type = 'text'
               ..text = replyText),
-        ]);
+        );
+      }
+
+      // Add image content if present
+      if (imageData != null && mimeType != null) {
+        final base64Data = base64Encode(imageData);
+        response.contents.add(
+          pb.McpResultContent()
+            ..type = 2 // image content type
+            ..image = (pb.ImageContent()
+              ..type = 'image'
+              ..data = base64Data
+              ..mimeType = mimeType),
+        );
+      }
 
       // Create original request for reply
       final originalRequest = pb.AskQuestionRequest()

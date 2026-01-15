@@ -33,13 +33,10 @@ class OnlineUsersBar extends StatelessWidget {
             color: Theme.of(context)
                 .colorScheme
                 .surfaceContainerHighest
-                .withValues(alpha: 0.3),
+                .withOpacity(0.3),
             border: Border(
               bottom: BorderSide(
-                color: Theme.of(context)
-                    .colorScheme
-                    .outline
-                    .withValues(alpha: 0.2),
+                color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
                 width: 1,
               ),
             ),
@@ -105,13 +102,13 @@ class OnlineUsersBar extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: isActive
-              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
+              ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
               : Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isActive
                 ? Theme.of(context).colorScheme.primary
-                : Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+                : Theme.of(context).colorScheme.outline.withOpacity(0.3),
             width: isActive ? 2 : 1,
           ),
         ),
@@ -341,11 +338,11 @@ class _ChatDialogState extends State<_ChatDialog> {
                                           ? Theme.of(context)
                                               .colorScheme
                                               .onPrimary
-                                              .withValues(alpha: 0.7)
+                                              .withOpacity(0.7)
                                           : Theme.of(context)
                                               .colorScheme
                                               .onSurfaceVariant
-                                              .withValues(alpha: 0.7),
+                                              .withOpacity(0.7),
                                     ),
                                   ),
                                 ],
